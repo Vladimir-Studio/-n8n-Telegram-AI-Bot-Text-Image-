@@ -1,0 +1,497 @@
+{
+  "name": "PEn04 / Телеграмм",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7e12a2ed-8f75-49d3-a664-4fb9ff6b9213",
+              "name": "message.text",
+              "value": "={{ $json.message?.text ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "9f067411-6a6b-452f-8bb9-6d86bc47c691",
+              "name": "message.action",
+              "value": "={{ $json.message.text.split(' ')[0] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1280,
+        320
+      ],
+      "id": "e6808e03-1906-4df0-9072-d8630aef4758",
+      "name": "PreProcessing"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0f25def0-0fa3-4b7a-9257-310ba362ada3",
+              "name": "model_temperature",
+              "value": 0.8,
+              "type": "number"
+            },
+            {
+              "id": "787064cb-f5d8-43f9-aff1-3af1cdbbd59e",
+              "name": "token_lenght",
+              "value": 500,
+              "type": "number"
+            },
+            {
+              "id": "602252f1-9fc3-427d-a031-989bbbd4aa9c",
+              "name": "system_command",
+              "value": "=Ты — дружелюбный чат-бот. Имя пользователя —. Системный язык пользователя — {{ $('Telegram Trigger1').item.json.message.from.first_name }}. Сначала определи язык текста пользователя - {{ $('Telegram Trigger1').item.json.message.from.language_code }}, затем ответь на том же языке. Добавь несколько подходящих эмодзи в свой ответ. ",
+              "type": "string"
+            },
+            {
+              "id": "0cb40f05-cd5e-45b0-8808-ca7f6097fe36",
+              "name": "bot_typing",
+              "value": "={{ $json.message.action === '/image' ? 'upload_photo' : 'typing' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1072,
+        320
+      ],
+      "id": "cbe8c63f-4703-46b1-9982-bca5980844b9",
+      "name": "Settings"
+    },
+    {
+      "parameters": {
+        "operation": "sendChatAction",
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "action": "={{ $json.bot_typing }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -928,
+        496
+      ],
+      "id": "67a64a02-f317-4a93-a1fd-5f58141a2d43",
+      "name": "Send a chat action",
+      "webhookId": "c1f0749f-1d19-4b97-a243-26183e8115d7",
+      "credentials": {
+        "telegramApi": {
+          "id": "ih4GeY6GhyjB6Gh4",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -800,
+        336
+      ],
+      "id": "240cae66-cc2f-43c3-9573-ed553aceaa12",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('PreProcessing').item.json.message.text }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "d5cef1aa-92dd-4039-a1a1-69d6a91fe011"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "dbe6a61f-c8ee-4f55-bd00-2b78ffe0a910",
+                    "leftValue": "={{ $('PreProcessing').item.json.message.text.split(' ')[0] }}",
+                    "rightValue": "/image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -624,
+        320
+      ],
+      "id": "930dc895-8163-4436-bb67-d81297b43517",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "modelId": "GigaChat-2",
+        "prompt": "={{ $json.system_command }}",
+        "options": {
+          "maxTokensToSample": "={{ $json.token_lenght }}",
+          "temperature": "={{ $json.model_temperature }}"
+        },
+        "simplifyOutput": true
+      },
+      "type": "n8n-nodes-gigachat.gigaChat",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        80
+      ],
+      "id": "8837ae78-cd5e-4ee6-a42a-03d0cb65f287",
+      "name": "GigaChat"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $json.message.content }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        112
+      ],
+      "id": "145ac6f8-aea9-4c4f-b738-f34272df4c2b",
+      "name": "Send a text message",
+      "webhookId": "cde4a188-0e82-4e4d-a55d-16a0e923acbc",
+      "credentials": {
+        "telegramApi": {
+          "id": "ih4GeY6GhyjB6Gh4",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Отправка данных в OpenAI\n\n",
+        "height": 288,
+        "width": 272
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        16
+      ],
+      "id": "81a5639b-ea72-4878-a7cf-c522d6645073",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "Извините, но мы не поддерживаем данный вид команд.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -384,
+        688
+      ],
+      "id": "659f173b-9495-4d1f-8be8-66a45ed25793",
+      "name": "Send a text message1",
+      "webhookId": "e4bda468-7dfd-42a4-889c-311572e5e7e6",
+      "credentials": {
+        "telegramApi": {
+          "id": "ih4GeY6GhyjB6Gh4",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "responses": {
+          "values": [
+            {}
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        416
+      ],
+      "id": "d9a36c62-a389-4c84-b58c-21080d9573a7",
+      "name": "Generate an image"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.from.id }}",
+        "file": "={{ $json.url }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        416
+      ],
+      "id": "8d51d019-fd99-450b-b92f-9bab044455cc",
+      "name": "Send a photo message",
+      "webhookId": "b5c447e0-f63b-440e-a10a-71493f6d8656",
+      "credentials": {
+        "telegramApi": {
+          "id": "ih4GeY6GhyjB6Gh4",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Генерация изображения",
+        "height": 288,
+        "width": 272
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        320
+      ],
+      "id": "76321163-a8ce-485a-a742-2d5a1be2f905",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Это первое сообщение от пользователя {{ $('Telegram Trigger1').item.json.message.from.first_name }}.\nПожалуйста поприветствуй его на языке  {{ $('Telegram Trigger1').item.json.message.from.language_code }}"
+            },
+            {
+              "content": "={{ $('Merge').item.json.system_command }}",
+              "role": "system"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -400,
+        112
+      ],
+      "id": "c8c14573-5e43-4c8b-9891-802f56d1b5be",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "xI8h0pF4EwLXwfVN",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "*"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1488,
+        320
+      ],
+      "id": "992fd776-42bc-4859-95d8-3fd0186a4cf7",
+      "name": "Telegram Trigger1",
+      "webhookId": "369fadad-3c31-44c3-9217-b48d1bd625c4",
+      "credentials": {
+        "telegramApi": {
+          "id": "ih4GeY6GhyjB6Gh4",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "PreProcessing": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Send a chat action",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a chat action": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate an image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "PreProcessing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an image": {
+      "main": [
+        [
+          {
+            "node": "Send a photo message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5127d40d-86d2-480f-acc8-2f91d9357b3e",
+  "meta": {
+    "instanceId": "505742baa896f1b87b9918e5a9cf48e4c51fc07b4d6775069378b897a5b7eebe"
+  },
+  "id": "86lJihRDezOnm7Ge",
+  "tags": []
+}
